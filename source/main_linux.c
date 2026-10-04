@@ -292,6 +292,7 @@ int main(void) {
 
     if ((frames % 60) == 0)
       debugPrintf("main: implOnDrawFrame begin (%lu)\n", frames);
+    keep_game_frame_limiter_off();
     ((void (*)(void *, void *, float))implOnDrawFrame)(fake_env, NULL, dt);
     if ((frames % 60) == 0)
       debugPrintf("main: implOnDrawFrame returned (%lu)\n", frames);

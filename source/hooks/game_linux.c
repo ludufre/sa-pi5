@@ -88,6 +88,22 @@ static int spawn_jni_thread(long *tid, const void *attr, const char *name,
 static int screen_get_width(void) { return screen_width; }
 static int screen_get_height(void) { return screen_height; }
 
+/* Mobile frame limiter (MobileSetting 30, hidden from the gamepad menu).
+ *
+ * Exact-version validation on the v2.11.311 payload (libGame.so sha256
+ * 4c6a7445e30b27afdda781302e4db9bac89c28fc1181b68b1eef16f84d6a282e):
+ * - MobileSettings::Set (0x36aaa8) stores to settings + id * 40 + 0x10.
+ * - DoGameState (0x3683b0) loads settings + 0x4c0 (id 30, value) and picks a
+ *   30 FPS target when it is nonzero, 60 otherwise.
+ * The game defaults it to 1, so stock Linux runs locked at 30 FPS. */
+#define FRAME_LIMITER_VALUE_OFFSET (30 * 40 + 0x10)
+static int *frame_limiter_value;
+
+void keep_game_frame_limiter_off(void) {
+  if (frame_limiter_value && !config.fps_cap_30)
+    *frame_limiter_value = 0;
+}
+
 #ifdef GTASA_FREE_AIM
 /* D-pad Down free-aim latch (ported from hooks/game.c).
  *
@@ -196,6 +212,10 @@ void patch_game(void) {
   uintptr_t cloud_saves = so_try_find_addr_rx(&game_mod, "UseCloudSaves");
   if (cloud_saves)
     *(uint8_t *)cloud_saves = 0;
+
+  uintptr_t mobile_settings = so_try_find_addr_rx(&game_mod, "_ZN14MobileSettings8settingsE");
+  if (mobile_settings)
+    frame_limiter_value = (int *)(mobile_settings + FRAME_LIMITER_VALUE_OFFSET);
 
 #ifdef GTASA_FREE_AIM
   /* Free-aim latch. Symbol-resolved targets; the two numeric offsets below
