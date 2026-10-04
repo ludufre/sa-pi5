@@ -13,12 +13,17 @@ KMSDRM (sem X) a partir do EmulationStation.
 - **Lançador para o RetroPie** (`pi5/`), sem depender do PortMaster.
 - **Mapeamento do 8BitDo SN30 Pro (D-Input)** no `run.sh`: o mapeamento padrão do SDL trocava
   A/B e X/Y e lia L2/R2 como eixos (no controle são os botões 8 e 9).
+- **SDL3 nativo no lugar do shim.** O `libs.aarch64/libSDL3.so.0` do upstream é uma ponte
+  SDL3→SDL2 que não avisava o jogo quando o controle reconectava. `pi5/build-sdl3.sh` compila
+  o SDL 3.4.18 de verdade (KMSDRM, udev, ALSA, PulseAudio) e o `run.sh` carrega `libs.sdl3/`.
 
 ## Build (Mac Apple Silicon ou qualquer host arm64 com Docker)
 
 ```sh
 docker buildx build --platform linux/arm64 -f Containerfile --target artifact \
   --output type=local,dest=out .
+docker run --rm --platform linux/arm64 -v "$PWD/out:/out" \
+  -v "$PWD/pi5/build-sdl3.sh:/b.sh" debian:bookworm bash /b.sh   # out/libSDL3.so.0
 ```
 
 ## Instalação no Pi
@@ -31,6 +36,7 @@ não fazem parte deste repositório.
 ├── Grand Theft Auto San Andreas.sh     # pi5/
 └── gtasa/
     ├── run.sh                          # pi5/
+    ├── libs.sdl3/libSDL3.so.0          # out/ do build-sdl3.sh
     ├── gtasa_linux, libs.aarch64/, Adjustable.cfg, assetfile.txt   # out/gtasa/
     ├── libGame.so, libc++_shared.so    # lib/arm64-v8a/ do APK
     └── anim/ audio/ data/ models/ ...  # assets/ do APK
